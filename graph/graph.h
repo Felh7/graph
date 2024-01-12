@@ -14,7 +14,8 @@ private:
     bool is_empty = true;
 public:
     graph(){;}
-    unsigned long get_size(){
+    
+    unsigned long get_size(){ // возвращает произведение размера ряда и размера столбца матрицы инцидентности
         if (!is_empty)
             return matrix.size() * matrix[0].size();
         return 0;
@@ -55,14 +56,13 @@ public:
             matrix[get_index_vert(vertex1)][matrix[0].size()-1] = 1;
             matrix[get_index_vert(vertex2)][matrix[0].size()-1] = 1;
             is_empty = false;
-            
         }
         
         else {
             std::cout << "no vertex in matrix" << std::endl;
         }
     }
-    int first(std::string vertex){
+    int first(std::string vertex){ // возвращает индекс первого смежного узла
         int index = get_vertex(vertex);
         if (index != -1) {
             for (int j=0; j< matrix.size();j++){
@@ -77,7 +77,7 @@ public:
         }
         return -1;
     }
-    int next_v(std::string vertex, int i){
+    int next_v(std::string vertex, int i){// возвращает индекс первого смежного узла после индекса i
         int index = get_vertex(vertex);
         if (index != -1) {
             for (int j=i+1; j< matrix.size();j++){
@@ -92,7 +92,7 @@ public:
         }
         return -1;
     }
-    std::string get_adjacent_vertex(std::string v, int i){
+    std::string get_adjacent_vertex(std::string v, int i){ // возврашает имя узла с заданным индексом
         int index = get_index_vert(v);
         if (index != -1) {
             for (int j =0;j<matrix[0].size();j++){
@@ -157,7 +157,7 @@ public:
         }
     }
     
-    void edit_v(std::string name, std::string new_mark){
+    void edit_v(std::string name, std::string new_mark){ // изменяет метку узла по его имени
         if (vertexes.size() != 0){
             int index = get_vertex(name);
             if (index != -1){
@@ -168,7 +168,17 @@ public:
             }
         }
     }
-    void edit_e(std::string vertex1, std::string vertex2, int new_cost){
+    void edit_v(int index, std::string new_mark){ // изменяет метку узла по его имени
+        if (vertexes.size() != 0){
+            if (index != -1){
+                marks[index] = new_mark;
+            }
+            else{
+                std::cout << "no vertex with name " << v_names[index]<<std::endl;
+            }
+        }
+    }
+    void edit_e(std::string vertex1, std::string vertex2, int new_cost){ //изменяет цену дуги
         if (!is_empty){
             int index = get_edge_index(vertex1, vertex2);
             if (index != -1){
@@ -182,7 +192,7 @@ public:
             std::cout << "graph is empty" << std::endl;
         }
     }
-    void display_matrix(){
+    void display_matrix(){ //выводит матрицу инцидентности
         if (!is_empty){
             std::cout << "___";
             for (int i=0; i<matrix[i].size();i++ ){
@@ -198,49 +208,49 @@ public:
             }
         }
     }
+    
     void search_chains(std::string vertex, std::string goal){
-        std::vector<std::vector<int>> temp = matrix;
-        for (int i=first(vertex); i>-1; i = next_v(vertex, i)){
-            marks[get_index_vert(vertex)] = "grey";
-            path.push_back(get_index_vert(vertex));
-            DFS_chain(v_names[i], goal);
+        std::vector<std::vector<int>> temp = matrix;// сохранение исходного состояния матрицы
+        for (int i=first(vertex); i>-1; i = next_v(vertex, i)){ // проход по всем соседям
+            marks[get_index_vert(vertex)] = "grey"; // метка посешенности
+            path.push_back(get_index_vert(vertex)); // добавление узла в цепь
+            DFS_chain(v_names[i], goal); // запуск рекурсивной функции
         }
         matrix = temp;
     }
     void DFS_chain(std::string start, std::string goal){
         int index = get_index_vert(start);
-        marks[index] = "grey";
-        path.push_back(index);
-        std::cout << "vertex " << start << "   ";
-
-        if (start != goal){
-            for (int i=first(start); i>-1; i = next_v(start, i)){
-                if (marks[i] == "white"){
-                    DFS_chain(v_names[i], goal);
+        edit_v(start, "grey");// маркирует узел посещенным
+        path.push_back(index);// добавляет в цепь посещения
+        
+        if (start != goal){// проверка на достижение узла-цели
+            for (int i=first(start); i>-1; i = next_v(start, i)){// проход по всем соседям
+                if (get_mark(i) == "white"){ // если узел не посещен
+                    DFS_chain(v_get_name(i), goal);
                 }
                 
             }
-            marks[index] = "black";
+            edit_v(index, "black"); // если больше не осталось смежных узлов маркируется полностью пройденным
             if (path.size() > 0){
-                path.pop_back();
+                path.pop_back(); // удаляет из цепи посещения
             }
         }
         else {
             chains.push_back(path);
-            for (int x =0; x<marks.size(); x++){
-                marks[x] = "white";
+            for (int x =0; x<marks.size(); x++){// маркировка всех узлов непройденным, чтобы посетить посещенные ранее но не входящие в конечную цепь узлы
+                edit_v(x, "white");
             }
-            marks[path[0]] = "grey"; // начальную вершину цепи обозначим пройденной воизбежание ее посещения
+            edit_v(path[0], "grey"); // начальную вершину цепи обозначим пройденной воизбежание ее посещения
             std::vector<int> *temp = new std::vector<int>();
             *temp = e_cost;
-            for (int l =1; l < path.size()-1; l++){
-                for (int k=first(v_names[ path[l] ]); k>-1; k = next_v(v_names[ path[l] ], k)) {
-                    del_e(v_names[ path[l] ], v_names[k] );
+            for (int l =1; l < path.size()-1; l++){ // удаляет дуги всех узлов, входящих в конечную цепь
+                for (int k=first(v_get_name(path[l]) ); k>-1; k = next_v(v_get_name(path[l]), k) ) {
+                    del_e(v_get_name(path[l]) , v_get_name(k) );
                 }
             }
             e_cost = *temp;
             delete temp;
-            path.erase(path.begin(), path.end());
+            path.erase(path.begin(), path.end()); // очищает цепь
         }
     }
     std::vector<std::vector<int>> get_chains(){
@@ -249,9 +259,40 @@ public:
     void print_chains(){
         for (int i=0; i< chains.size();i++){
             for (int j=0;j< chains[i].size();j++){
-                std::cout << v_names[ chains[i][j] ] << "  ";
+                std::cout << v_get_name(chains[i][j]) << "  ";
             }
             std::cout << std::endl;
         }
+    }
+    
+    void erase_chains(){
+        chains.erase(chains.begin(), chains.end());
+    }
+    int get_cost(std::string vertex){
+        int index = get_index_vert(vertex);
+        return e_cost[index];
+    }
+    std::string get_mark(std::string vertex){
+        int index = get_index_vert(vertex);
+        return marks[index];
+    }
+    std::string get_mark(int index){
+        return marks[index];
+    }
+    
+    void print_marks(){
+        for (int i=0; i< marks.size();i++){
+            std::cout << marks[i] << " ";
+        }
+        std::cout << std::endl;
+    }
+    void print_costs(){
+        for (int i=0; i< e_cost.size();i++){
+            std::cout << e_cost[i] << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::string v_get_name(int index){
+        return v_names[index];
     }
 };
